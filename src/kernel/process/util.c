@@ -1,11 +1,20 @@
 #include "kernel.h"
+#include <stdarg.h>
 
 PCB pcb_pool[PCB_POOL_SIZE];
 uint32_t num_of_proc = 0;
 
+#define MAX_NUM_OF_VARIABLES 16
+
 PCB*
-create_kthread(void *fun) {
+create_kthread(void *fun, ...) {
     uint32_t* frame = (void*)(pcb_pool[num_of_proc].kstack) + KSTACK_SIZE;
+
+    void** p = &fun + 1;
+    int i;
+    for (i=0;i<MAX_NUM_OF_VARIABLES;i++)
+        *(frame--) = (uint32_t)*p;
+
     frame[-1]=0x202; //eflags
     asm("mov %%cs, %0":"=a"(frame[-2])); //cs
     frame[-3]=(uint32_t)fun; //eip
@@ -24,18 +33,24 @@ create_kthread(void *fun) {
     //frame[-16]=0; //esi
     //frame[-17]=0; //edi
     pcb_pool[num_of_proc].tf = &frame[-17];
+
     return &pcb_pool[num_of_proc++];
 }
 
-void A();
-void B();
+//void A();
+//void B();
+void print_ch (int);
 
 void
 init_proc() {
-    create_kthread(A);
-    create_kthread(B);
+    //create_kthread(A);
+    //create_kthread(B);
+    int i;
+    for(i = 0; i < 7; i ++) {
+        create_kthread(print_ch, 'a' + i);
+    }
 }
-
+/*
 void A () {
     int x = 0;
     while(1) {
@@ -47,6 +62,14 @@ void B () {
     int x = 0;
     while(1) {
         if(x % 100000 == 0) {printk("b");}
+        x ++;
+    }
+}
+*/
+void print_ch (int ch) {
+    int x = 0;
+    while(1) {
+        if(x % 100000 == 0) {printk("%c", ch);}
         x ++;
     }
 }
