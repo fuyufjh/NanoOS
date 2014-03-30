@@ -4,7 +4,7 @@
 PCB pcb_pool[PCB_POOL_SIZE];
 uint32_t num_of_proc = 0;
 
-#define MAX_NUM_OF_VARIABLES 16
+#define MAX_NUM_OF_ARGUMENTS 16
 
 PCB*
 create_kthread(void *fun, ...) {
@@ -12,7 +12,7 @@ create_kthread(void *fun, ...) {
 
     void** p = &fun + 1;
     int i;
-    for (i=0;i<MAX_NUM_OF_VARIABLES;i++)
+    for (i=0;i<MAX_NUM_OF_ARGUMENTS;i++)
         *(frame--) = (uint32_t)*p;
 
     frame[-1]=0x202; //eflags
