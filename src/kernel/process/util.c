@@ -10,10 +10,10 @@ PCB*
 create_kthread(void *fun, ...) {
     uint32_t* frame = (void*)(pcb_pool[num_of_proc].kstack) + KSTACK_SIZE;
 
-    void** p = &fun + 1;
+    void** p = &fun + MAX_NUM_OF_ARGUMENTS;
     int i;
     for (i=0;i<MAX_NUM_OF_ARGUMENTS;i++)
-        *(frame--) = (uint32_t)*p;
+        *(frame--) = (uint32_t)*(p--);
 
     frame[-1]=0x202; //eflags
     asm("mov %%cs, %0":"=a"(frame[-2])); //cs
