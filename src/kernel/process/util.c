@@ -8,6 +8,7 @@ uint32_t num_of_proc = 0;
 
 PCB*
 create_kthread(void *fun, ...) {
+    cli();
     uint32_t* frame = (void*)(pcb_pool[num_of_proc].kstack) + KSTACK_SIZE;
 
     void** p = &fun + MAX_NUM_OF_ARGUMENTS;
@@ -33,7 +34,7 @@ create_kthread(void *fun, ...) {
     //frame[-16]=0; //esi
     //frame[-17]=0; //edi
     pcb_pool[num_of_proc].tf = &frame[-17];
-
+    sti();
     return &pcb_pool[num_of_proc++];
 }
 
@@ -50,42 +51,12 @@ void print_ch (int);
 
 void
 init_proc() {
-    //create_kthread(A);
-    //create_kthread(B);
-    /*int i;
-    for(i = 0; i < 7; i ++) {
-        create_kthread(print_ch, 'a' + i);
-    }*/
-    cli();
     PCB_of_thread_A=create_kthread(A);
     PCB_of_thread_B=create_kthread(B);
     PCB_of_thread_C=create_kthread(C);
     PCB_of_thread_D=create_kthread(D);
-    sti();
 }
-/*
-void A () {
-    int x = 0;
-    while(1) {
-        if(x % 100000 == 0) {printk("a");}
-        x ++;
-    }
-}
-void B () {
-    int x = 0;
-    while(1) {
-        if(x % 100000 == 0) {printk("b");}
-        x ++;
-    }
-}
-*/
-void print_ch (int ch) {
-    int x = 0;
-    while(1) {
-        if(x % 100000 == 0) {printk("%c", ch);}
-        x ++;
-    }
-}
+
 void A () {
     int x = 0;
     while(1) {
@@ -133,13 +104,11 @@ void D () {
 void sleep(void)
 {
     current->stat = STAT_SLEEPING;
-    wait_intr();
+    asm volatile("int $0x80");
 }
-
 
 void wakeup(PCB *p)
 {
     p->stat = STAT_WAITING;
-    //need to switch????
 }
 

@@ -39,7 +39,7 @@ in_byte(short port) {
 	asm volatile("in %1,%0" : "=a" (data) : "d" (port));
 	return data;
 }
-static inline int 
+static inline int
 in_long(short port) {
 	int data;
 	asm volatile("in %1, %0" : "=a" (data) : "d" (port));

@@ -54,7 +54,7 @@ asm_do_irq:
 #     4. REGISTERS ARE REFERENCED BY "%", SUCH AS %esp
 
 ################### your work ###################
-    movl (current), %eax
+    movl current, %eax
     movl (%eax), %esp
 
 #################################################

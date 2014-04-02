@@ -44,6 +44,8 @@ void irq_handle(TrapFrame *tf) {
 		panic("Unhandled exception!");
 	}
 
+    if (irq==0x80) goto PROC; // Switch Process...
+
 	if (irq < 1000) {
 		extern uint8_t logo[];
 		panic("Unexpected exception #%d\n\33[1;31mHint: The machine is always right! For more details about exception #%d, see\n%s\n\33[0m", irq, irq, logo);
@@ -55,11 +57,11 @@ void irq_handle(TrapFrame *tf) {
 		struct IRQ_t *f = handles[irq_id];
 
 		while (f != NULL) { /* call handlers one by one */
-			f->routine(); 
+			f->routine();
 			f = f->next;
 		}
 	}
-
+PROC:
 	current->tf = tf;
 	schedule();
 }

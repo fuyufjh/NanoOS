@@ -6,7 +6,6 @@ int int_to_hex(unsigned x, char* str);
 
 void vfprintf(void (*printer)(char), const char *ctl, void **args) {
 	const char *str = ctl;
-	//for(;*str != '\0'; str ++) printer(*str);
     int i=0;
     for (;*str != '\0'; str++)
     {

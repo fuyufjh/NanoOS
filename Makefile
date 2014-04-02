@@ -30,3 +30,9 @@ kernel: $(OBJS)
 clean:
 	@cd boot; make clean
 	rm -f kernel disk.img $(OBJS) $(OBJS:.o=.d)
+
+NLINES = $(shell find -iname "*.[chS]" | xargs grep -v "^$$" | wc -l)
+
+count:
+	@echo "$(NLINES) lines in total."
+	
