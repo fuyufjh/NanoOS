@@ -62,7 +62,7 @@ void irq_handle(TrapFrame *tf) {
 		}
 	}
 PROC:
-	current->tf = tf;
+	((struct task_struct *)current)->tf = tf;
 	schedule();
 }
 

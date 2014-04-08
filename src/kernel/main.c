@@ -22,7 +22,7 @@ os_init(void) {
 	   Before setting up correct paging, no global variable can be used. */
 	init_page();
 
-	/* After paging is enabled, we can jump to the high address to keep 
+	/* After paging is enabled, we can jump to the high address to keep
 	 * consistent with virtual memory, although it is not necessary. */
 	asm volatile (" addl %0, %%esp\n\t\
 					jmp *%1": : "r"(KOFFSET), "r"(os_init_cont));

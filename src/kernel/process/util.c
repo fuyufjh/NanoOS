@@ -1,6 +1,6 @@
 #include "kernel.h"
 #include <stdarg.h>
-
+#include "adt/list.h"
 PCB pcb_pool[PCB_POOL_SIZE];
 uint32_t num_of_proc = 0;
 
@@ -9,7 +9,12 @@ uint32_t num_of_proc = 0;
 PCB*
 create_kthread(void *fun, ...) {
     cli();
-    uint32_t* frame = (void*)(pcb_pool[num_of_proc].kstack) + KSTACK_SIZE;
+
+    assert(free.next != &free);
+    PCB* selected_free = (PCB*)free.next;
+    list_del((ListHead*)selected_free);
+
+    uint32_t* frame = (void*)(selected_free) + KSTACK_SIZE;
 
     void** p = &fun + MAX_NUM_OF_ARGUMENTS;
     int i;
@@ -33,9 +38,10 @@ create_kthread(void *fun, ...) {
     //frame[-15]=0; //ebp
     //frame[-16]=0; //esi
     //frame[-17]=0; //edi
-    pcb_pool[num_of_proc].tf = &frame[-17];
+    ((struct task_struct *)selected_free)->tf = &frame[-17];
+    list_add_before(&block, (ListHead*)selected_free);
     sti();
-    return &pcb_pool[num_of_proc++];
+    return selected_free;
 }
 
 void A();
@@ -51,10 +57,26 @@ void print_ch (int);
 
 void
 init_proc() {
+    list_init(&ready);
+    list_init(&block);
+    list_init(&free);
+
+    int i;
+    for (i=0;i<PCB_POOL_SIZE;i++)
+        list_add_before(&free, &(pcb_pool[i].ts.list));
+
+    // test
     PCB_of_thread_A=create_kthread(A);
     PCB_of_thread_B=create_kthread(B);
     PCB_of_thread_C=create_kthread(C);
     PCB_of_thread_D=create_kthread(D);
+    wakeup(PCB_of_thread_A);
+
+    /*ListHead* it;
+    list_foreach(it, &ready)
+    {
+        printk("READY_LIST: PROC %d, s=%d\n",(PCB*)it-&pcb_pool[0],((struct task_struct*)it)->stat);
+    }*/
 }
 
 void A () {
@@ -103,12 +125,18 @@ void D () {
 }
 void sleep(void)
 {
-    current->stat = STAT_SLEEPING;
+    cli();
+    list_del((ListHead*)current);
+    list_add_before(&block,(ListHead*)current);
+    sti();
     asm volatile("int $0x80");
 }
 
 void wakeup(PCB *p)
 {
-    p->stat = STAT_WAITING;
+    cli();
+    list_del((ListHead*)p);
+    list_add_before(&ready,(ListHead*)p);
+    sti();
 }
 
