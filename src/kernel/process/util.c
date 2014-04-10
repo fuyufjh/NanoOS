@@ -1,8 +1,8 @@
 #include "kernel.h"
 #include <stdarg.h>
 #include "adt/list.h"
-PCB pcb_pool[PCB_POOL_SIZE];
-uint32_t num_of_proc = 0;
+
+PCB pcb_pool[PCB_POOL_SIZE] align_to_page;
 
 #define MAX_NUM_OF_ARGUMENTS 16
 
@@ -53,8 +53,6 @@ PCB* PCB_of_thread_B;
 PCB* PCB_of_thread_C;
 PCB* PCB_of_thread_D;
 
-void print_ch (int);
-
 void
 init_proc() {
     list_init(&ready);
@@ -71,12 +69,6 @@ init_proc() {
     PCB_of_thread_C=create_kthread(C);
     PCB_of_thread_D=create_kthread(D);
     wakeup(PCB_of_thread_A);
-
-    /*ListHead* it;
-    list_foreach(it, &ready)
-    {
-        printk("READY_LIST: PROC %d, s=%d\n",(PCB*)it-&pcb_pool[0],((struct task_struct*)it)->stat);
-    }*/
 }
 
 void A () {
