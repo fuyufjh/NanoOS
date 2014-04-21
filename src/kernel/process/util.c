@@ -8,7 +8,8 @@ PCB pcb_pool[PCB_POOL_SIZE] align_to_page;
 
 PCB*
 create_kthread(void *fun, ...) {
-    cli();
+    //cli();
+    lock();
 
     assert(free.next != &free);
     PCB* selected_free = (PCB*)free.next;
@@ -40,7 +41,10 @@ create_kthread(void *fun, ...) {
     //frame[-17]=0; //edi
     ((struct task_struct *)selected_free)->tf = &frame[-17];
     list_add_before(&block, (ListHead*)selected_free);
-    sti();
+    ((struct task_struct*)selected_free)->locked=0;
+    //sti();
+    unlock();
+
     return selected_free;
 }
 
@@ -52,6 +56,7 @@ PCB* PCB_of_thread_A;
 PCB* PCB_of_thread_B;
 PCB* PCB_of_thread_C;
 PCB* PCB_of_thread_D;
+void test_setup(void);
 
 void
 init_proc() {
@@ -64,11 +69,12 @@ init_proc() {
         list_add_before(&free, &(pcb_pool[i].ts.list));
 
     // test
-    PCB_of_thread_A=create_kthread(A);
-    PCB_of_thread_B=create_kthread(B);
-    PCB_of_thread_C=create_kthread(C);
-    PCB_of_thread_D=create_kthread(D);
-    wakeup(PCB_of_thread_A);
+    //PCB_of_thread_A=create_kthread(A);
+    //PCB_of_thread_B=create_kthread(B);
+    //PCB_of_thread_C=create_kthread(C);
+    //PCB_of_thread_D=create_kthread(D);
+    //wakeup(PCB_of_thread_A);
+
 }
 
 void A () {
@@ -115,20 +121,79 @@ void D () {
         x ++;
     }
 }
+extern int lock_count;
 void sleep(void)
 {
-    cli();
+    //cli();
+    ((struct task_struct*)current)->locked=lock_count;
+    lock();
+    lock_flag |= 0x2;
     list_del((ListHead*)current);
     list_add_before(&block,(ListHead*)current);
-    sti();
+    unlock();
     asm volatile("int $0x80");
 }
 
 void wakeup(PCB *p)
 {
-    cli();
+    //cli();
+    lock();
     list_del((ListHead*)p);
     list_add_before(&ready,(ListHead*)p);
-    sti();
+    unlock();
+    //sti();
 }
 
+
+/* TEST CODE *//* TEST CODE */
+
+#define NBUF 5
+#define NR_PROD 3
+#define NR_CONS 4
+int buf[NBUF], f = 0, r = 0, g = 1;
+int last = 0;
+Sem empty, full, mutex;
+
+void
+test_producer(void) {
+	while (1) {
+		P(&mutex);
+		P(&empty);
+		if(g % 10000 == 0) {
+			printk(".");	// tell us threads are really working
+		}
+		buf[f ++] = g ++;
+		f %= NBUF;
+		V(&full);
+		V(&mutex);
+	}
+}
+
+void
+test_consumer(void) {
+	int get;
+	while (1) {
+		P(&mutex);
+		P(&full);
+		get = buf[r ++];
+		assert(last == get - 1);	// the products should be strictly increasing
+		last = get;
+		r %= NBUF;
+		V(&empty);
+		V(&mutex);
+	}
+}
+
+void
+test_setup(void) {
+	create_sem(&full, 0);
+	create_sem(&empty, NBUF);
+	create_sem(&mutex, 1);
+	int i;
+	for(i = 0; i < NR_PROD; i ++) {
+		wakeup(create_kthread(test_producer));
+	}
+	for(i = 0; i < NR_CONS; i ++) {
+		wakeup(create_kthread(test_consumer));
+	}
+}

@@ -13,6 +13,8 @@ void welcome(void);
 
 void os_init_cont(void);
 
+void test_setup();
+
 void
 os_init(void) {
 	/* Notice that when we are here, IF is always 0 (see bootloader) */
@@ -21,6 +23,15 @@ os_init(void) {
 	   thinks it is located in 0xC0000000.
 	   Before setting up correct paging, no global variable can be used. */
 	init_page();
+
+    #define PORT_TIME 0x40
+    #define FREQ_8253 1193182
+    #define HZ        100000
+    int count = FREQ_8253 / HZ;
+    assert(count < 65536);
+    out_byte(PORT_TIME + 3, 0x34);
+    out_byte(PORT_TIME    , count % 256);
+    out_byte(PORT_TIME    , count / 256);
 
 	/* After paging is enabled, we can jump to the high address to keep
 	 * consistent with virtual memory, although it is not necessary. */
@@ -54,10 +65,12 @@ os_init_cont(void) {
 
 	sti();
 
+    test_setup();
 	/* This context now becomes the idle process. */
 	while (1) {
 		wait_intr();
 	}
+
 }
 
 void

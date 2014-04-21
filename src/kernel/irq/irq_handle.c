@@ -14,6 +14,8 @@
    slots periodically. So the IDE driver also calls add_irq_handle
    to register a handler. */
 
+extern int lock_count;
+
 struct IRQ_t {
 	void (*routine)(void);
 	struct IRQ_t *next;
@@ -37,8 +39,11 @@ add_irq_handle(int irq, void (*func)(void) ) {
 }
 void schedule();
 
+extern unsigned lock_flag;
+
 void irq_handle(TrapFrame *tf) {
 	int irq = tf->irq;
+    lock_flag |= 0x1; // set flag
 
 	if (irq < 0) {
 		panic("Unhandled exception!");
@@ -61,8 +66,12 @@ void irq_handle(TrapFrame *tf) {
 			f = f->next;
 		}
 	}
+
 PROC:
 	((struct task_struct *)current)->tf = tf;
 	schedule();
+    lock_count=((struct task_struct *)current)->locked;
+
+    lock_flag &= 0xfffffffe; // release flag
 }
 

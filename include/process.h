@@ -16,6 +16,7 @@ ListHead ready, block, free;
 struct task_struct {
     ListHead list;
     void *tf;
+    int locked;
     //proc_stat_t stat;
 };
 
@@ -31,5 +32,18 @@ void wakeup(PCB *p);
 
 PCB pcb_pool[PCB_POOL_SIZE];
 uint32_t num_of_proc;
+
+typedef struct Semaphore {
+	int token;
+	ListHead block;
+} Sem;
+
+void lock();
+void unlock();
+void P(Sem* s);
+void V(Sem* s);
+void create_sem(Sem* sem, int value);
+
+unsigned lock_flag;
 
 #endif
