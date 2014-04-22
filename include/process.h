@@ -6,9 +6,8 @@
 #define PCB_POOL_SIZE 2048
 #define KSTACK_SIZE 4096
 
-#define STAT_WAITING 0
-#define STAT_WORKING 1
-#define STAT_SLEEPING 2
+#define STAT_READY 0
+#define STAT_SLEEPING 1
 typedef unsigned proc_stat_t;
 
 ListHead ready, block, free;
@@ -17,7 +16,7 @@ struct task_struct {
     ListHead list;
     void *tf;
     int locked;
-    //proc_stat_t stat;
+    proc_stat_t stat;
 };
 
 typedef union PCB {
@@ -29,6 +28,7 @@ extern PCB *current;
 
 void sleep(void);
 void wakeup(PCB *p);
+void sleep_sem(ListHead* block);
 
 PCB pcb_pool[PCB_POOL_SIZE];
 uint32_t num_of_proc;

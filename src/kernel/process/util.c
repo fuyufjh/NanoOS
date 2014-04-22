@@ -8,8 +8,7 @@ PCB pcb_pool[PCB_POOL_SIZE] align_to_page;
 
 PCB*
 create_kthread(void *fun, ...) {
-    //cli();
-    lock();
+    cli();
 
     assert(free.next != &free);
     PCB* selected_free = (PCB*)free.next;
@@ -42,8 +41,8 @@ create_kthread(void *fun, ...) {
     ((struct task_struct *)selected_free)->tf = &frame[-17];
     list_add_before(&block, (ListHead*)selected_free);
     ((struct task_struct*)selected_free)->locked=0;
-    //sti();
-    unlock();
+    ((struct task_struct*)selected_free)->stat = STAT_SLEEPING;
+    sti();
 
     return selected_free;
 }
@@ -125,21 +124,33 @@ extern int lock_count;
 void sleep(void)
 {
     //cli();
-    ((struct task_struct*)current)->locked=lock_count;
+    //((struct task_struct*)current)->locked=lock_count;
     lock();
-    lock_flag |= 0x2;
     list_del((ListHead*)current);
     list_add_before(&block,(ListHead*)current);
+    ((struct task_struct*)current)->stat = STAT_SLEEPING;
     unlock();
     asm volatile("int $0x80");
 }
-
+void sleep_sem(ListHead* block)
+{
+    //cli();
+    //((struct task_struct*)current)->locked=lock_count;
+    lock();
+    list_del((ListHead*)current);
+    list_add_before(block,(ListHead*)current);
+    ((struct task_struct*)current)->stat = STAT_SLEEPING;
+    unlock();
+    asm volatile("int $0x80");
+}
 void wakeup(PCB *p)
 {
+    assert(((struct task_struct*)p)->stat == STAT_SLEEPING);
     //cli();
     lock();
     list_del((ListHead*)p);
-    list_add_before(&ready,(ListHead*)p);
+    list_add_after(&ready,(ListHead*)p);
+    ((struct task_struct *)p)->stat = STAT_READY;
     unlock();
     //sti();
 }
@@ -157,15 +168,15 @@ Sem empty, full, mutex;
 void
 test_producer(void) {
 	while (1) {
-		P(&mutex);
 		P(&empty);
+		P(&mutex);
 		if(g % 10000 == 0) {
 			printk(".");	// tell us threads are really working
 		}
 		buf[f ++] = g ++;
 		f %= NBUF;
-		V(&full);
 		V(&mutex);
+		V(&full);
 	}
 }
 
@@ -173,14 +184,14 @@ void
 test_consumer(void) {
 	int get;
 	while (1) {
-		P(&mutex);
 		P(&full);
+		P(&mutex);
 		get = buf[r ++];
 		assert(last == get - 1);	// the products should be strictly increasing
 		last = get;
 		r %= NBUF;
-		V(&empty);
 		V(&mutex);
+		V(&empty);
 	}
 }
 

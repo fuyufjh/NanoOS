@@ -3,10 +3,12 @@
 #include "adt/list.h"
 
 int lock_count=0;
+unsigned lock_flag=0;
 
 void lock() {
     cli();
     lock_count++;
+    //printk("%d",lock_count);
 }
 
 void unlock() {
@@ -26,27 +28,34 @@ void P(Sem* s) {
     }
     else
     {
-        list_add_after(&(s->block), (ListHead*)current);
-        sleep();
+        //list_add_after(&(s->block), (ListHead*)current);
+        lock_flag |= 0x2;
+        sleep_sem(&(s->block));
+        cli();
+        lock_flag &= 0xfffffffd;
     }
+    //printk("P%d ",s->token);
     unlock();
 }
 
 void V(Sem* s) {
     lock();
-    if (list_empty(&(s->block))) {
+    if (!list_empty(&(s->block))) {
         wakeup((PCB*)(s->block.next));
-        list_del(s->block.next);
+        //list_del(s->block.next);
     } else {
         s->token++;
     }
+    //printk("V%d ",s->token);
     unlock();
 }
 
 void create_sem(Sem* sem, int value)
 {
+    lock();
     list_init(&(sem->block));
     sem->token = value;
+    unlock();
 }
 
 
