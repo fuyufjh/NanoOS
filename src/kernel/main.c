@@ -1,7 +1,7 @@
 #include "common.h"
 #include "x86/x86.h"
 #include "memory.h"
-
+#include "process.h"
 
 void init_page(void);
 void init_serial(void);
@@ -14,6 +14,16 @@ void welcome(void);
 void os_init_cont(void);
 
 void test_setup();
+void A();
+void B();
+void C();
+void D();
+void E();
+pid_t pidA=0;
+pid_t pidB=1;
+pid_t pidC=2;
+pid_t pidD=3;
+pid_t pidE=4;
 
 void
 os_init(void) {
@@ -24,6 +34,7 @@ os_init(void) {
 	   Before setting up correct paging, no global variable can be used. */
 	init_page();
 
+    /* Speed up the timer interrupt (for test)
     #define PORT_TIME 0x40
     #define FREQ_8253 1193182
     #define HZ        100000
@@ -31,7 +42,7 @@ os_init(void) {
     assert(count < 65536);
     out_byte(PORT_TIME + 3, 0x34);
     out_byte(PORT_TIME    , count % 256);
-    out_byte(PORT_TIME    , count / 256);
+    out_byte(PORT_TIME    , count / 256);*/
 
 	/* After paging is enabled, we can jump to the high address to keep
 	 * consistent with virtual memory, although it is not necessary. */
@@ -65,7 +76,15 @@ os_init_cont(void) {
 
 	sti();
 
-    test_setup();
+    //test_setup();
+
+    // Test Message
+    wakeup(create_kthread(A));
+    wakeup(create_kthread(B));
+    wakeup(create_kthread(C));
+    wakeup(create_kthread(D));
+    wakeup(create_kthread(E));
+
 	/* This context now becomes the idle process. */
 	while (1) {
 		wait_intr();

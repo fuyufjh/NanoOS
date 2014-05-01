@@ -68,10 +68,10 @@ void irq_handle(TrapFrame *tf) {
 	}
 
 PROC:
-	((struct task_struct *)current)->tf = tf;
-    ((struct task_struct *)current)->locked = lock_count;
+    current->ts.tf = tf;
+    current->ts.locked = lock_count;
 	schedule();
-    lock_count=((struct task_struct *)current)->locked;
+    lock_count = current->ts.locked;
 
     lock_flag &= 0xfffffffe; // release flag
 }

@@ -8,6 +8,7 @@ PCB pcb_pool[PCB_POOL_SIZE] align_to_page;
 
 PCB*
 create_kthread(void *fun, ...) {
+    int intr_flag = read_eflags() & 0x200;
     cli();
 
     assert(free.next != &free);
@@ -38,24 +39,26 @@ create_kthread(void *fun, ...) {
     //frame[-15]=0; //ebp
     //frame[-16]=0; //esi
     //frame[-17]=0; //edi
-    ((struct task_struct *)selected_free)->tf = &frame[-17];
+    selected_free->ts.tf = &frame[-17];
+
     list_add_before(&block, (ListHead*)selected_free);
-    ((struct task_struct*)selected_free)->locked=0;
-    ((struct task_struct*)selected_free)->stat = STAT_SLEEPING;
-    sti();
+    selected_free->ts.locked=0;
+    selected_free->ts.stat = STAT_SLEEPING;
+    list_init(&selected_free->ts.msg_list);
+    create_sem(&selected_free->ts.msg_sem,0);
+    selected_free->ts.pid = selected_free - &pcb_pool[0];
+
+    if (intr_flag) sti();
 
     return selected_free;
 }
 
-void A();
-void B();
-void C();
-void D();
-PCB* PCB_of_thread_A;
-PCB* PCB_of_thread_B;
-PCB* PCB_of_thread_C;
-PCB* PCB_of_thread_D;
 void test_setup(void);
+pid_t pidA;
+pid_t pidB;
+pid_t pidC;
+pid_t pidD;
+pid_t pidE;
 
 void
 init_proc() {
@@ -66,60 +69,82 @@ init_proc() {
     int i;
     for (i=0;i<PCB_POOL_SIZE;i++)
         list_add_before(&free, &(pcb_pool[i].ts.list));
-
-    // test
-    //PCB_of_thread_A=create_kthread(A);
-    //PCB_of_thread_B=create_kthread(B);
-    //PCB_of_thread_C=create_kthread(C);
-    //PCB_of_thread_D=create_kthread(D);
-    //wakeup(PCB_of_thread_A);
-
 }
 
 void A () {
-    int x = 0;
-    while(1) {
-        if(x % 100000 == 0) {
-            printk("a");
-            wakeup(PCB_of_thread_B);
-            sleep();
-        }
-        x ++;
-    }
+	Msg m1, m2;
+	m1.src = current->ts.pid;
+	int x = 0;
+	while(1) {
+		if(x % 10000000 == 0) {
+			printk("a");
+			send(pidE, &m1);
+			receive(pidE, &m2);
+		}
+		x ++;
+	}
 }
 void B () {
-    int x = 0;
-    while(1) {
-        if(x % 100000 == 0) {
-            printk("b");
-            wakeup(PCB_of_thread_C);
-            sleep();
-        }
-        x ++;
-    }
+	Msg m1, m2;
+	m1.src = current->ts.pid;
+	int x = 0;
+	receive(pidE, &m2);
+	while(1) {
+		if(x % 10000000 == 0) {
+			printk("b");
+			send(pidE, &m1);
+			receive(pidE, &m2);
+		}
+		x ++;
+	}
 }
 void C () {
-    int x = 0;
-    while(1) {
-        if(x % 100000 == 0) {
-            printk("c");
-            wakeup(PCB_of_thread_D);
-            sleep();
-        }
-        x ++;
-    }
+	Msg m1, m2;
+	m1.src = current->ts.pid;
+	int x = 0;
+	receive(pidE, &m2);
+	while(1) {
+		if(x % 10000000 == 0) {
+			printk("c");
+			send(pidE, &m1);
+			receive(pidE, &m2);
+		}
+		x ++;
+	}
 }
 void D () {
-    int x = 0;
-    while(1) {
-        if(x % 100000 == 0) {
-            printk("d");
-            wakeup(PCB_of_thread_A);
-            sleep();
-        }
-        x ++;
-    }
+	Msg m1, m2;
+	m1.src = current->ts.pid;
+	receive(pidE, &m2);
+	int x = 0;
+	while(1) {
+		if(x % 10000000 == 0) {
+			printk("d");
+			send(pidE, &m1);
+			receive(pidE, &m2);
+		}
+		x ++;
+	}
 }
+
+void E () {
+	Msg m1, m2;
+	m2.src = current->ts.pid;
+	char c;
+	while(1) {
+		receive(ANY, &m1);
+		if(m1.src == pidA) {c = '|'; m2.dest = pidB; }
+		else if(m1.src == pidB) {c = '/'; m2.dest = pidC;}
+		else if(m1.src == pidC) {c = '-'; m2.dest = pidD;}
+		else if(m1.src == pidD) {c = '\\';m2.dest = pidA;}
+		else assert(0);
+
+		printk("\033[s\033[1000;1000H%c\033[u", c);
+		send(m2.dest, &m2);
+	}
+
+}
+
 extern int lock_count;
 void sleep(void)
 {
@@ -128,29 +153,32 @@ void sleep(void)
     lock();
     list_del((ListHead*)current);
     list_add_before(&block,(ListHead*)current);
-    ((struct task_struct*)current)->stat = STAT_SLEEPING;
+    //((struct task_struct*)current)->stat = STAT_SLEEPING;
+    current->ts.stat = STAT_SLEEPING;
     unlock();
     asm volatile("int $0x80");
 }
-void sleep_sem(ListHead* block)
+void sleep_sem(Sem* s)
 {
     //cli();
     //((struct task_struct*)current)->locked=lock_count;
+    //ListHead* block = s->block;
     lock();
     list_del((ListHead*)current);
-    list_add_before(block,(ListHead*)current);
-    ((struct task_struct*)current)->stat = STAT_SLEEPING;
+    list_add_before(&s->block,(ListHead*)current);
+    //((struct task_struct*)current)->stat = STAT_SLEEPING;
+    current->ts.stat = STAT_SLEEPING;
     unlock();
     asm volatile("int $0x80");
 }
 void wakeup(PCB *p)
 {
-    assert(((struct task_struct*)p)->stat == STAT_SLEEPING);
+    assert(p->ts.stat == STAT_SLEEPING);
     //cli();
     lock();
     list_del((ListHead*)p);
     list_add_after(&ready,(ListHead*)p);
-    ((struct task_struct *)p)->stat = STAT_READY;
+    p->ts.stat = STAT_READY;
     unlock();
     //sti();
 }

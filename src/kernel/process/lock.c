@@ -5,13 +5,13 @@
 int lock_count=0;
 unsigned lock_flag=0;
 
-void lock() {
+inline void lock() {
     cli();
     lock_count++;
     //printk("%d",lock_count);
 }
 
-void unlock() {
+inline void unlock() {
     lock_count--;
     if (lock_flag & 0x1) return; // irq handle
     if (lock_flag & 0x2) sti(); // It is going to sleep
@@ -20,7 +20,7 @@ void unlock() {
     sti();
 }
 
-void P(Sem* s) {
+inline void P(Sem* s) {
     lock();
     if (s->token > 0)
     {
@@ -30,7 +30,7 @@ void P(Sem* s) {
     {
         //list_add_after(&(s->block), (ListHead*)current);
         lock_flag |= 0x2;
-        sleep_sem(&(s->block));
+        sleep_sem(s);
         cli();
         lock_flag &= 0xfffffffd;
     }
@@ -38,7 +38,7 @@ void P(Sem* s) {
     unlock();
 }
 
-void V(Sem* s) {
+inline void V(Sem* s) {
     lock();
     if (!list_empty(&(s->block))) {
         wakeup((PCB*)(s->block.next));
