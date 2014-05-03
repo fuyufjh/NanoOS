@@ -9,6 +9,7 @@ void init_segment(void);
 void init_idt(void);
 void init_intr(void);
 void init_proc(void);
+void init_driver(void);
 void welcome(void);
 
 void os_init_cont(void);
@@ -74,16 +75,18 @@ os_init_cont(void) {
 
 	welcome();
 
+    init_driver();
+
 	sti();
 
     //test_setup();
 
     // Test Message
-    wakeup(create_kthread(A));
-    wakeup(create_kthread(B));
-    wakeup(create_kthread(C));
-    wakeup(create_kthread(D));
-    wakeup(create_kthread(E));
+    //wakeup(create_kthread(A));
+    //wakeup(create_kthread(B));
+    //wakeup(create_kthread(C));
+    //wakeup(create_kthread(D));
+    //wakeup(create_kthread(E));
 
 	/* This context now becomes the idle process. */
 	while (1) {

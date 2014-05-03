@@ -17,20 +17,19 @@ typedef struct Semaphore {
 	ListHead block;
 } Sem;
 
-struct task_struct {
-    ListHead list;
-    void *tf;
-    /* ABOVE ITEMS SHOULD NOT BE MODIFIED!  */
-    int locked;
-    proc_stat_t stat;
-    ListHead msg_list;
-    Sem msg_sem;
-    pid_t pid;
-};
 
 typedef union PCB {
     uint32_t kstack[KSTACK_SIZE];
-    struct task_struct ts;
+    struct {
+        ListHead list;
+        void *tf;
+        /* ABOVE ITEMS SHOULD NOT BE MODIFIED!  */
+        int locked;
+        proc_stat_t stat;
+        ListHead msg_list;
+        Sem msg_sem;
+        pid_t pid;
+    };
 } PCB;
 
 extern PCB *current;
@@ -72,7 +71,17 @@ typedef struct Message {
 
 /* Message */
 #define ANY -1
+#define MSG_HARD_INTR -2
 void send(pid_t dest, Msg *m);
 void receive(pid_t src, Msg *m);
+
+/* TTY */
+void copy_from_kernel(PCB* pcb, void* dest, void* src, int len);
+void copy_to_kernel(PCB* pcb, void* dest, void* src, int len);
+void strcpy_to_kernel(PCB* pcb, char* dest, char* src);
+void strcpy_from_kernel(PCB* pcb, char* dest, char* src);
+
+inline PCB* fetch_pcb(pid_t pid);
+void add_irq_handle(int irq, void (*func)(void) );
 
 #endif

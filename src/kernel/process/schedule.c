@@ -10,13 +10,13 @@ schedule(void) {
         current = &idle;
     else if (current == &idle)
         current=(PCB*)(ready.next);
-    else if (current->ts.stat == STAT_SLEEPING)
+    else if (current->stat == STAT_SLEEPING)
         current=(PCB*)(ready.next);
     else
     {
-        current = (PCB*)(current->ts.list.next);
+        current = (PCB*)(current->list.next);
         if ((ListHead*)current == &ready)
-            current = (PCB*)(current->ts.list.next);
+            current = (PCB*)(current->list.next);
     }
-    //printk("SCHDULE: PROC %d\n",current->ts.pid);
+    //printk("SCHDULE: PROC %d\n",current->pid);
 }
