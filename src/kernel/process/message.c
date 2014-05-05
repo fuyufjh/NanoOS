@@ -10,19 +10,20 @@ void send(pid_t dest, Msg *m)
 {
     PCB* dest_proc = &pcb_pool[dest];
     m->dest = dest;
+    if (m->src == 0) // if SRC was not set
+        m->src = current->pid;
     msg_pool[p_free] = *m; // copy
     lock();
     list_add_before(&(dest_proc->msg_list), &(msg_pool[p_free++].list));
     if (p_free >= MSG_POOL_SIZE) p_free =0;
     unlock();
     V(&dest_proc->msg_sem);
-    //printk("SENT: %d->%d\n",current->pid, dest);
+    //printk("SENT: %d->%d (%d)\n",current->pid, dest, m->type);
 }
 
 void receive(pid_t src, Msg *m)
 {
     Msg* msg_to_rcv;
-    //printk("%d TRY TO RECEIVE from %d\n",current->pid,src);
     if (src==ANY)
     {
         P(&current->msg_sem);
@@ -31,7 +32,7 @@ void receive(pid_t src, Msg *m)
         list_del(&(msg_to_rcv->list));
         unlock();
         *m = *msg_to_rcv;
-        //printk("RECEIVED: %d<-%d\n",current->pid, msg_to_rcv->src);
+        //printk("RECEIVED: %d<-%d (%d)\n",current->pid, msg_to_rcv->src, msg_to_rcv->type);
         return;
     }
     else
@@ -56,6 +57,7 @@ void receive(pid_t src, Msg *m)
                 }
             }
             V(&current->msg_sem);
+            wait_intr();
         }
     }
     //V(&current->msg_sem);

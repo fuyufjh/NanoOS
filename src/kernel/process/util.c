@@ -41,12 +41,12 @@ create_kthread(void *fun, ...) {
     //frame[-17]=0; //edi
     selected_free->tf = &frame[-17];
 
-    list_add_before(&block, (ListHead*)selected_free);
+    list_add_before(&block, &selected_free->list);
     selected_free->locked=0;
     selected_free->stat = STAT_SLEEPING;
     list_init(&selected_free->msg_list);
     create_sem(&selected_free->msg_sem,0);
-    selected_free->pid = selected_free - &pcb_pool[0];
+    selected_free->pid = selected_free - pcb_pool;
 
     if (intr_flag) sti();
 
@@ -67,8 +67,9 @@ init_proc() {
     list_init(&free);
 
     int i;
-    for (i=0;i<PCB_POOL_SIZE;i++)
+    for (i=1;i<PCB_POOL_SIZE;i++) // do not use pcb_pool[0]
         list_add_before(&free, &(pcb_pool[i].list));
+
 }
 
 void A () {
@@ -171,13 +172,14 @@ void sleep_sem(Sem* s)
     unlock();
     asm volatile("int $0x80");
 }
+
 void wakeup(PCB *p)
 {
     assert(p->stat == STAT_SLEEPING);
     //cli();
     lock();
     list_del((ListHead*)p);
-    list_add_after(&ready,(ListHead*)p);
+    list_add_before(&ready,(ListHead*)p);
     p->stat = STAT_READY;
     unlock();
     //sti();
@@ -188,7 +190,7 @@ inline PCB* fetch_pcb(pid_t pid)
     return &pcb_pool[pid];
 }
 
-/* TEST CODE *//* TEST CODE */
+/* TEST CODE */
 
 #define NBUF 5
 #define NR_PROD 3

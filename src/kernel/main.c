@@ -14,7 +14,7 @@ void welcome(void);
 
 void os_init_cont(void);
 
-void test_setup();
+/*void test_setup();
 void A();
 void B();
 void C();
@@ -24,7 +24,9 @@ pid_t pidA=0;
 pid_t pidB=1;
 pid_t pidC=2;
 pid_t pidD=3;
-pid_t pidE=4;
+pid_t pidE=4;*/
+void read_mbr();
+void test_timer(int sec);
 
 void
 os_init(void) {
@@ -79,6 +81,13 @@ os_init_cont(void) {
 
 	sti();
 
+    wakeup(create_kthread(read_mbr));
+
+    wakeup(create_kthread(test_timer, 1));
+    wakeup(create_kthread(test_timer, 2));
+    wakeup(create_kthread(test_timer, 3));
+    wakeup(create_kthread(test_timer, 3));
+
     //test_setup();
 
     // Test Message
@@ -98,4 +107,34 @@ os_init_cont(void) {
 void
 welcome(void) {
 	printk("Hello, OS World!\n");
+}
+
+/* Test IDE I/O */
+#include "hal.h"
+pid_t IDE;
+void read_mbr()
+{
+    uint8_t mbr[512];
+    dev_read("hda",IDE,mbr,0,512);
+    printk("======= MBR Data ======\n");
+    int i;
+    for (i=0;i<512;i++)
+        printk("%x ", mbr[i]);
+    printk("\n");
+    sleep();
+}
+
+/* Test Timer */
+#include "time.h"
+pid_t TIMER;
+void test_timer(int sec)
+{
+    printk("Alarm was set at %d sec latter.\n",sec);
+    Msg m;
+    m.type = NEW_TIMER;
+    m.i[0] = sec;
+    send(TIMER, &m);
+    receive(TIMER, &m);
+    printk("Time up! (%d sec)\n", sec);
+    sleep();
 }

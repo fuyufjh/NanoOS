@@ -1,7 +1,9 @@
 #include "kernel.h"
 #include "adt/list.h"
 
-PCB idle, *current = &idle;
+//PCB idle, *current = &idle;
+#define idle (pcb_pool[0]) // idle.pid=0
+PCB *current = &idle;
 
 void
 schedule(void) {
