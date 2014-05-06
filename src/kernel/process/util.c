@@ -12,7 +12,7 @@ create_kthread(void *fun, ...) {
     cli();
 
     assert(free.next != &free);
-    PCB* selected_free = (PCB*)free.next;
+    PCB* selected_free = list_entry(free.next, PCB, list);
     list_del((ListHead*)selected_free);
 
     uint32_t* frame = (void*)(selected_free) + KSTACK_SIZE;
@@ -149,25 +149,20 @@ void E () {
 extern int lock_count;
 void sleep(void)
 {
-    //cli();
     //((struct task_struct*)current)->locked=lock_count;
     lock();
-    list_del((ListHead*)current);
-    list_add_before(&block,(ListHead*)current);
-    //((struct task_struct*)current)->stat = STAT_SLEEPING;
+    list_del(&current->list);
+    list_add_before(&block,&current->list);
     current->stat = STAT_SLEEPING;
     unlock();
     asm volatile("int $0x80");
 }
 void sleep_sem(Sem* s)
 {
-    //cli();
     //((struct task_struct*)current)->locked=lock_count;
-    //ListHead* block = s->block;
     lock();
-    list_del((ListHead*)current);
-    list_add_before(&s->block,(ListHead*)current);
-    //((struct task_struct*)current)->stat = STAT_SLEEPING;
+    list_del(&current->list);
+    list_add_before(&s->block,&current->list);
     current->stat = STAT_SLEEPING;
     unlock();
     asm volatile("int $0x80");
@@ -175,14 +170,15 @@ void sleep_sem(Sem* s)
 
 void wakeup(PCB *p)
 {
+    /* Some mystrious bug happened sometimes. but WHY????
+     * I use this following line to prevent it....*/
+    if (p < &pcb_pool[0] || p > &pcb_pool[PCB_POOL_SIZE]) return;
     assert(p->stat == STAT_SLEEPING);
-    //cli();
     lock();
-    list_del((ListHead*)p);
-    list_add_before(&ready,(ListHead*)p);
+    list_del(&p->list);
+    list_add_before(&ready,&p->list);
     p->stat = STAT_READY;
     unlock();
-    //sti();
 }
 
 inline PCB* fetch_pcb(pid_t pid)

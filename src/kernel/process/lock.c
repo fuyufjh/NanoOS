@@ -41,6 +41,7 @@ inline void P(Sem* s) {
 inline void V(Sem* s) {
     lock();
     if (!list_empty(&(s->block))) {
+        //printk("V");
         wakeup((PCB*)(s->block.next));
         //list_del(s->block.next);
     } else {

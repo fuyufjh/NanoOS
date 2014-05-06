@@ -31,6 +31,7 @@ void test_ramdisk();
 void test_kmem();
 void test_null();
 void test_zero();
+void test_random();
 
 void
 os_init(void) {
@@ -85,6 +86,7 @@ os_init_cont(void) {
 
 	sti();
 
+    /* TEST CODE */
     wakeup(create_kthread(read_mbr));
 
     wakeup(create_kthread(test_timer, 1));
@@ -96,6 +98,8 @@ os_init_cont(void) {
     wakeup(create_kthread(test_kmem));
     wakeup(create_kthread(test_null));
     wakeup(create_kthread(test_zero));
+    wakeup(create_kthread(test_random));
+
     //test_setup();
 
     // Test Message
@@ -186,6 +190,16 @@ void test_zero() {
     memset(buf, 0xff, sizeof(buf));
     dev_read("zero", current->pid, buf, 123, 120);
     if (buf[119] ==0) printk("If you see these words, device 'zero' works well.^o^\n");
+    sleep();
+}
+
+/* Test RANDOM */
+void test_random() {
+    static char buf[4];
+    memset(buf, 0xff, sizeof(buf));
+    dev_read("random", current->pid, buf, 0, 4);
+    printk("device 'random' gives 4 random number (range -128~127): %d %d %d %d\n",\
+            buf[0], buf[1], buf[2], buf[3]);
     sleep();
 }
 

@@ -41,10 +41,8 @@ void receive(pid_t src, Msg *m)
         while (1)
         {
             P(&current->msg_sem);
-            //printk("P GET!!!!");
             list_foreach(p, &current->msg_list)
             {
-                //printk("CMP %x %x",list_entry(p,Msg,list)->src ,src);
                 if (list_entry(p,Msg,list)->src == src)
                 {
                     lock();
@@ -60,6 +58,4 @@ void receive(pid_t src, Msg *m)
             wait_intr();
         }
     }
-    //V(&current->msg_sem);
-    //sleep_sem(&current->msg_sem);
 }
