@@ -27,6 +27,10 @@ pid_t pidD=3;
 pid_t pidE=4;*/
 void read_mbr();
 void test_timer(int sec);
+void test_ramdisk();
+void test_kmem();
+void test_null();
+void test_zero();
 
 void
 os_init(void) {
@@ -88,6 +92,10 @@ os_init_cont(void) {
     wakeup(create_kthread(test_timer, 3));
     wakeup(create_kthread(test_timer, 3));
 
+    wakeup(create_kthread(test_ramdisk));
+    wakeup(create_kthread(test_kmem));
+    wakeup(create_kthread(test_null));
+    wakeup(create_kthread(test_zero));
     //test_setup();
 
     // Test Message
@@ -118,9 +126,11 @@ void read_mbr()
     dev_read("hda",IDE,mbr,0,512);
     printk("======= MBR Data ======\n");
     int i;
+    lock();
     for (i=0;i<512;i++)
         printk("%x ", mbr[i]);
     printk("\n");
+    unlock();
     sleep();
 }
 
@@ -129,7 +139,7 @@ void read_mbr()
 pid_t TIMER;
 void test_timer(int sec)
 {
-    printk("Alarm was set at %d sec latter.\n",sec);
+    printk("Alarm was set at %d sec later.\n",sec);
     Msg m;
     m.type = NEW_TIMER;
     m.i[0] = sec;
@@ -138,3 +148,44 @@ void test_timer(int sec)
     printk("Time up! (%d sec)\n", sec);
     sleep();
 }
+
+/* Test Ramdisk */
+pid_t RAMDISK;
+char test_data_mem[]="If you see these words, device 'mem' works well.^o^\n";
+void test_ramdisk() {
+    printk("Trying to read data from mem...\n");
+    static char buf[128];
+    dev_read("mem", current->pid, buf, (uint32_t)test_data_mem, 127);
+    printk(buf);
+    sleep();
+}
+
+/* Test KRAM */
+pid_t KRAM;
+char test_data_kmem[]="If you see these words, device 'kmem' works well.^o^\n";
+void test_kmem() {
+    printk("Trying to read data from kmem...\n");
+    static char buf[128];
+    dev_read("kmem", current->pid, buf, (uint32_t)test_data_kmem - KOFFSET, 127);
+    printk(buf);
+    sleep();
+}
+
+/* Test NULL */
+void test_null() {
+    static char buf[128];
+    int ret = dev_read("null", current->pid, buf, 123, 123);
+    if (ret ==0) printk("If you see these words, device 'null' works well.^o^\n");
+    sleep();
+}
+
+/* Test ZERO */
+void memset(void *dest, uint8_t data, size_t size);
+void test_zero() {
+    static char buf[128];
+    memset(buf, 0xff, sizeof(buf));
+    dev_read("zero", current->pid, buf, 123, 120);
+    if (buf[119] ==0) printk("If you see these words, device 'zero' works well.^o^\n");
+    sleep();
+}
+
