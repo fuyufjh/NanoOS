@@ -14,24 +14,25 @@ void welcome(void);
 
 void os_init_cont(void);
 
-/*void test_setup();
+void test_setup();
 void A();
 void B();
 void C();
 void D();
 void E();
-pid_t pidA=0;
-pid_t pidB=1;
-pid_t pidC=2;
-pid_t pidD=3;
-pid_t pidE=4;*/
+pid_t pidA;
+pid_t pidB;
+pid_t pidC;
+pid_t pidD;
+pid_t pidE;
 void read_mbr();
 void test_timer(int sec);
-void test_ramdisk();
+void test_mem();
 void test_kmem();
 void test_null();
 void test_zero();
 void test_random();
+void test_fm(int file_name, bool new_file);
 
 void
 os_init(void) {
@@ -87,7 +88,7 @@ os_init_cont(void) {
 	sti();
 
     /* TEST CODE */
-    wakeup(create_kthread(read_mbr));
+    /*wakeup(create_kthread(read_mbr));
 
     wakeup(create_kthread(test_timer, 1));
     wakeup(create_kthread(test_timer, 2));
@@ -103,11 +104,26 @@ os_init_cont(void) {
     //test_setup();
 
     // Test Message
-    //wakeup(create_kthread(A));
-    //wakeup(create_kthread(B));
-    //wakeup(create_kthread(C));
-    //wakeup(create_kthread(D));
-    //wakeup(create_kthread(E));
+    PCB* pcbA;
+    wakeup(pcbA = create_kthread(A));
+    pidA = pcbA->pid;
+    PCB* pcbB;
+    wakeup(pcbB = create_kthread(B));
+    pidB = pcbB->pid;
+    PCB* pcbC;
+    wakeup(pcbC = create_kthread(C));
+    pidC = pcbC->pid;
+    PCB* pcbD;
+    wakeup(pcbD = create_kthread(D));
+    pidD = pcbD->pid;
+    PCB* pcbE;
+    wakeup(pcbE = create_kthread(E));
+    pidE = pcbE->pid;*/
+
+    wakeup(create_kthread(test_fm, 2, true));
+    wakeup(create_kthread(test_fm, 3, true));
+    wakeup(create_kthread(test_fm, 4, true));
+    wakeup(create_kthread(test_fm, 4, false));
 
 	/* This context now becomes the idle process. */
 	while (1) {
@@ -153,10 +169,9 @@ void test_timer(int sec)
     sleep();
 }
 
-/* Test Ramdisk */
-pid_t RAMDISK;
+/* Test Mem */
 char test_data_mem[]="If you see these words, device 'mem' works well.^o^\n";
-void test_ramdisk() {
+void test_mem() {
     printk("Trying to read data from mem...\n");
     static char buf[128];
     dev_read("mem", current->pid, buf, (uint32_t)test_data_mem, 127);
@@ -164,8 +179,7 @@ void test_ramdisk() {
     sleep();
 }
 
-/* Test KRAM */
-pid_t KRAM;
+/* Test Kmem */
 char test_data_kmem[]="If you see these words, device 'kmem' works well.^o^\n";
 void test_kmem() {
     printk("Trying to read data from kmem...\n");
@@ -203,3 +217,30 @@ void test_random() {
     sleep();
 }
 
+/* Test Ramdisk */
+#define FM_NEW_FILE 1
+#define FM_READ 2
+pid_t FM;
+void test_fm(int no, bool new_file) {
+    uint8_t buf[128];
+    Msg m;
+    printk("Trying to read from File %d...\n",no);
+
+    if (new_file) {
+        m.src = current->pid;
+        m.type = FM_NEW_FILE;
+        m.i[0] = no;
+        send(FM, &m);
+        receive(FM, &m);
+    }
+    m.src = current->pid;
+    m.type = FM_READ;
+    m.i[0] = no;
+    m.buf = buf;
+    m.offset = 0;
+    m.len = 128;
+    send(FM, &m);
+    receive(FM, &m);
+    printk("%sFile %d: %s",new_file?"(new) ":"" , no , buf);
+    sleep();
+}
