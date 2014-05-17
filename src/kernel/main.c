@@ -34,6 +34,8 @@ void test_zero();
 void test_random();
 void test_fm(int file_name, bool new_file);
 
+void create_process(int filename);
+
 void
 os_init(void) {
 	/* Notice that when we are here, IF is always 0 (see bootloader) */
@@ -61,6 +63,10 @@ os_init(void) {
 	assert(0);	// should not reach here
 }
 
+#define PCB_POOL_SIZE 2048
+PCB pcb_pool[PCB_POOL_SIZE];
+inline CR3* get_kcr3();
+
 void
 os_init_cont(void) {
 	/* Reset the GDT. Although user processes in Nanos run in Ring 0,
@@ -80,12 +86,15 @@ os_init_cont(void) {
 
 	/* Initialize processes. You should fill this. */
 	init_proc();
+    pcb_pool[0].cr3 = *get_kcr3();
 
 	welcome();
 
     init_driver();
 
 	sti();
+
+
 
     /* TEST CODE */
     /*wakeup(create_kthread(read_mbr));
@@ -120,10 +129,12 @@ os_init_cont(void) {
     wakeup(pcbE = create_kthread(E));
     pidE = pcbE->pid;*/
 
-    wakeup(create_kthread(test_fm, 2, true));
-    wakeup(create_kthread(test_fm, 3, true));
-    wakeup(create_kthread(test_fm, 4, true));
-    wakeup(create_kthread(test_fm, 4, false));
+    //wakeup(create_kthread(test_fm, 2, true));
+    //wakeup(create_kthread(test_fm, 3, true));
+    //wakeup(create_kthread(test_fm, 4, true));
+    //wakeup(create_kthread(test_fm, 4, false));
+
+    create_process(1);
 
 	/* This context now becomes the idle process. */
 	while (1) {

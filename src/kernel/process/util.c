@@ -4,6 +4,8 @@
 
 PCB pcb_pool[PCB_POOL_SIZE] align_to_page;
 
+inline CR3* get_kcr3();
+
 #define MAX_NUM_OF_ARGUMENTS 16
 
 PCB*
@@ -47,6 +49,7 @@ create_kthread(void *fun, ...) {
     list_init(&selected_free->msg_list);
     create_sem(&selected_free->msg_sem,0);
     selected_free->pid = selected_free - pcb_pool;
+    selected_free->cr3 = *get_kcr3();
 
     if (intr_flag) sti();
 

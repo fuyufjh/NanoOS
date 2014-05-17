@@ -11,6 +11,8 @@ void init_zero();
 void init_random();
 void init_ramdisk();
 void init_fm();
+void init_mm();
+void init_pm();
 
 void init_driver() {
 	init_hal();
@@ -24,6 +26,8 @@ void init_driver() {
     init_random();
     init_ramdisk();
     init_fm();
+    init_mm();
+    init_pm();
 
 	hal_list();
 }

@@ -29,6 +29,7 @@ typedef union PCB {
         ListHead msg_list;
         Sem msg_sem;
         pid_t pid;
+        CR3 cr3;
     };
 } PCB;
 
