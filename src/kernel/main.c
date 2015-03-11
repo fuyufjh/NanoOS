@@ -86,7 +86,6 @@ os_init_cont(void) {
 
 	/* Initialize processes. You should fill this. */
 	init_proc();
-    pcb_pool[0].cr3 = *get_kcr3();
 
 	welcome();
 

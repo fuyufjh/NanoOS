@@ -46,19 +46,12 @@ uint32_t do_allocate_new_pages(pid_t pid, uint8_t* va, size_t size) {
 
     CR3 cr3 = pcb_pool[pid].cr3; // CR3 is right
     PDE* pde = (PDE*) (((uint32_t *)(cr3.val & ~0xfff)) + ((uint32_t)va >> 22));
-    //printk("pde=%x",pde);
-    //PTE* ptable = (PTE*)(((uint8_t*)pde) + PAGE_SIZE);
-    //printk("%x\n",pde->val);
-    //if (pde->val == 0) {
 
     /* allocating here */
     PTE* ptable = (PTE*)(pde->val & ~0xfff);
-    //printk("ptable=%x",ptable);
-        for (ptable_idx = 0; ptable_idx < NR_PTE; ptable_idx++) {
-            //make_pte(&ptable[ptable_idx], (void*)(((uint32_t)va & ~0x3fffff) + (ptable_idx << 12)));
-            make_pte(&ptable[ptable_idx], (void*)(((32 + vmem_free * 4) << 20)+(ptable_idx << 12)) );
-        }
-    //}
+    for (ptable_idx = 0; ptable_idx < NR_PTE; ptable_idx++) {
+        make_pte(&ptable[ptable_idx], (void*)(((32 + vmem_free * 4) << 20)+(ptable_idx << 12)) );
+    }
     uint32_t pa= (ptable[((uint32_t)va >> 12) & 0x3ff].val & ~0x3ff) + ((uint32_t)va & 0xfff);
     return pa;
 }

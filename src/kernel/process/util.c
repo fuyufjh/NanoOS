@@ -73,6 +73,8 @@ init_proc() {
     for (i=1;i<PCB_POOL_SIZE;i++) // do not use pcb_pool[0]
         list_add_before(&free, &(pcb_pool[i].list));
 
+    pcb_pool[0].cr3 = *get_kcr3();
+    list_init(&pcb_pool[0].msg_list);
 }
 
 void A () {

@@ -49,8 +49,7 @@ void create_process(int filename) {
     m.type = PM_NEW_PROC;
     m.i[0] = filename;
     send(PM, &m);
-    receive(PM, &m);
-    printk("CREATE PROCESS DONE!\n");
+    printk("Create user process successfully.\n");
 }
 
 static void do_new_proc(int filename) {
@@ -90,7 +89,6 @@ static void do_new_proc(int filename) {
     send(m.dest, &m);
     receive(MM, &m);
     pcb->cr3.val = m.ret;
-    //printk("user proc pid = %d, cr3 = %x",pcb->pid,pcb->cr3.val);
 
     /* Copy process to mem */
     struct ProgramHeader *ph = (struct ProgramHeader*) (((uint8_t*)elf) + elf->phoff);
@@ -98,7 +96,6 @@ static void do_new_proc(int filename) {
     for (entry = 0; entry < elf->phnum; entry++) {
         m.src = pcb->pid;
         m.i[0] = ph[entry].vaddr;
-        //printk("vaddr=%x\n",m.i[0]);
         m.i[1] = ph[entry].memsz;
         m.dest = MM;
         m.type = MM_NEW_PAGE;
@@ -133,10 +130,6 @@ void pm_thread() {
         receive(ANY, &m);
         if (m.type == PM_NEW_PROC) {
             do_new_proc(m.i[0]);
-            m.ret = 0;
-            m.dest = m.src;
-            m.src = PM;
-            send(m.dest, &m);
         } else
             assert(0);
     }
